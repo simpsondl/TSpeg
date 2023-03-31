@@ -6,11 +6,29 @@
 #SBATCH --job-name="makeinters"
 #SBATCH --output=/Genomics/grid/users/ds65/logs/%x-%j.out
 
-# Allows batch submission of prepare-intermediate_files.sh
+##########################################################################
+#### Before running this, edit the SBATCH directives above to point   ####
+#### to your own log directory and to have appropriate time and       #### 
+#### memory constraints based on the amount of sequencing performed   #### 
+#### and number of sequences that need to be aligned.                 ####
+##########################################################################
 
-# Call script with                 
-### sbatch --export=indir=INDIR prepare_intermediate_files_driver.s
-### INDIR is full path for input directory containing bam files
+##########################################################################
+#### This script expects a directory to be given as input. Two sorted ####
+#### BAM files, resulting from running bowtie2_single_read_align.s on ####
+#### input FASTQs (forward and reverse), should be inside the input   #### 
+#### directory. This script will then check reads for recombination-- ####
+#### where the pegRNA does not match the target site--and generate a  #### 
+#### whitelist of reads to move forward in addition to coverage stats ####
+#### for all pegRNAs in the library.                                  ####
+##########################################################################
+
+##########################################################################
+#### Call script with                                                 ####
+#### sbatch --export=indir=INDIR prepare_intermediate_files_driver.s  ####
+#### where                                                            ####
+#### #### INDIR is full path for input directory containing bam files ####
+##########################################################################
 
 module purge
 
