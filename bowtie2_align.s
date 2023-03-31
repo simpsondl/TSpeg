@@ -7,12 +7,29 @@
 #SBATCH --output=~/logs/%x-%j.out
 
 ##########################################################################
-#### Before running this, edit the SBATCH directives above to point   ####
-#### to your own log directory and to have appropriate time and       #### 
-#### memory constraints based on the amount of sequencing performed   #### 
-#### and number of sequences that need to be aligned. If additional   ####
-#### processing power is needed, ensure that the number of threads in #### 
-#### the bowtie2 call (-p) is the same as --ntasks-per-node above.    ####
+#### BEFORE RUNNING THIS, edit the SBATCH directives above to point   ####
+#### to your own log directory and to have appropriate time and       ####
+#### memory constraints based on the amount of sequencing performed   ####
+#### and number of sequences that need to be aligned. Additionally,   ####
+#### check the DEPENDENCY section below for scripts that are called   ####
+#### by this file, then adjust file paths to point to a local copy    ####
+#### and make any necessary changes to those scripts themselves.      ####
+##########################################################################
+
+##########################################################################
+#### PURPOSE: Align each read independently to reference              ####
+##########################################################################
+
+##########################################################################
+#### PREREQUISITE: NONE                                               ####
+##########################################################################
+
+##########################################################################
+#### DEPENDENCY: NONE                                                 ####
+##########################################################################
+
+##########################################################################
+#### OUTPUT: Creates a sorted BAM file                                ####
 ##########################################################################
 
 ##########################################################################
@@ -25,7 +42,7 @@
 
 ###############################################################################################
 #### Call script with                                                                      ####
-#### sbatch --export=in=READ.FQ,index=REF,out=OUT bowtie2_single_read_align.s              ####
+#### sbatch --export=in=READ.FQ,index=REF,out=OUT bowtie2_align.s                          ####
 #### where                                                                                 ####
 #### #### READ.FQ is the input fastq file to be processed (full path, can be gz)           ####
 #### #### REF is the base name of the reference index (full path)                          ####

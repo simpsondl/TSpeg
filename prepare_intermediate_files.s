@@ -54,7 +54,7 @@
 
 ##########################################################################
 #### Call script with                                                 ####
-#### sbatch --export=indir=INDIR prepare_intermediate_files_driver.s  ####
+#### sbatch --export=indir=INDIR prepare_intermediate_files.s         ####
 #### where                                                            ####
 #### #### INDIR is full path for input directory containing bam files ####
 #### #### #### The basename of INDIR will appear in file outputs.     ####
