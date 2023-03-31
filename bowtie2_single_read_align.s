@@ -20,8 +20,7 @@
 #### will align that fastq file to the indicated reference, provided  ####
 #### by the index variable in the submission call. After aligning all #### 
 #### reads, the resulting alignment is sorted according to read names ####
-#### and saved in SAM format. Files are saved as SAM because they are #### 
-#### processed directly as text files afterwards.                     ####
+#### and saved in BAM format.                                         ####
 ##########################################################################
 
 ###############################################################################################
@@ -30,7 +29,7 @@
 #### where                                                                                 ####
 #### #### READ.FQ is the input fastq file to be processed (full path, can be gz)           ####
 #### #### REF is the base name of the reference index (full path)                          ####
-#### #### OUT is the name of the output file (full path, should include .sam as extension) ####
+#### #### OUT is the name of the output file (full path, should include .bam as extension) ####
 ###############################################################################################
 
 module purge
@@ -40,4 +39,4 @@ module load samtools
 echo Aligning sample $in
 echo to reference $index
 
-bowtie2 -p 8 -x $index -U $in | samtools sort -n - > $out
+bowtie2 -p 8 -x $index -U $in | samtools sort -n -O bam -o $out - 
