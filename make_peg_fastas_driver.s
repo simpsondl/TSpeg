@@ -42,9 +42,14 @@
 #### number of "chunks" that get processed. Temp files for each chunk ####
 #### will be made at this step and a job is created for each one. Use ####
 #### appropriate setting for sz to avoid creating too many jobs and   ####
-#### reaching limits. This script can be run after a partial run that ####
-#### processes only some of the pegRNAs for a sample, or if some pegs ####
-#### fail to fully process (after removing partial outputs)           ####
+#### reaching limits. This script also creates trimmed fastqs by      ####
+#### setting the parameters trimb and trime, which remove bases from  ####
+#### beginnings and ends of reads, respectively.                      ####
+####                                                                  ####
+#### This script can be recover after a partial run that processes    ####
+#### only some of the pegRNAs for a sample or if some pegRNAs fail.   ####
+#### Remove any partial output files that were created and submit job ####
+#### normally; pegRNAs which were already processed will be detected. ####   
 ##########################################################################
 
 ########################################################################################################################
@@ -90,5 +95,5 @@ done
 for i in tmp_*
 do
 	sbatch --export=sampfq=${sampfq},chnk=${i},trimb=${trimb},trime=${trime} \
-	~/scripts/pegRNA/make_peg_fastas_mini.s  #THIS PATH SHOULD UPDATED TO A LOCAL COPY
+	~/scripts/pegRNA/make_peg_fastas_mini.s  #THIS PATH SHOULD BE UPDATED TO A LOCAL COPY
 done
