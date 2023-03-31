@@ -7,12 +7,13 @@
 #SBATCH --output=/Genomics/grid/users/ds65/logs/%x-%j.out
 
 ##########################################################################
-#### Before running this, edit the SBATCH directives above to point   ####
-#### to your own log directory and to have appropriate time and       #### 
-#### memory constraints based on the amount of sequencing performed   #### 
+#### BEFORE RUNNING THIS, edit the SBATCH directives above to point   ####
+#### to your own log directory and to have appropriate time and       ####
+#### memory constraints based on the amount of sequencing performed   ####
 #### and number of sequences that need to be aligned. Additionally,   ####
-#### adjust the path of the script make_peg_fastas_mini.s to point to ####
-#### a local copy of this pipeline.                                   ####
+#### check the DEPENDENCY section below for scripts that are called   ####
+#### by this file, then adjust file paths to point to a local copy of ####
+#### this pipeline and make any necessary changes to those scripts.   ####
 ##########################################################################
 
 ##########################################################################
@@ -24,8 +25,12 @@
 ##########################################################################
 
 ##########################################################################
+#### DEPENDENCY: Calls the script make_peg_fastas_mini.s              ####
+##########################################################################
+
+##########################################################################
 #### OUTPUT: One trimmed and one untrimmed FASTQ containing target    ####
-####         region readouts for each pegRNA in library               ####    
+####         region readouts for each pegRNA in library               ####
 ##########################################################################
 
 ##########################################################################
@@ -38,18 +43,23 @@
 #### will be made at this step and a job is created for each one. Use ####
 #### appropriate setting for sz to avoid creating too many jobs and   ####
 #### reaching limits. This script can be run after a partial run that ####
-#### processes only some of the pegRNAs for a sample.                 ####
+#### processes only some of the pegRNAs for a sample, or if some pegs ####
+#### fail to fully process (after removing partial outputs)           ####
 ##########################################################################
 
-##################################################################################################
-#### Call script with                                                                         ####
-#### sbatch --export=indir=INDIR,sz=SIZE,sampfq=SAMPLEFQ make_peg_fastas_driver.s             ####
-#### where                                                                                    ####
-#### #### INDIR is full path for input directory containing outputs from PREREQS              ####
-#### #### SIZE is the number of pegRNAs to process in each job                                ####
-#### #### #### LIBRARY_SIZE / SIZE = NUM JOBS SUBMITTED                                       ####
-#### #### SAMPLEFQ is the full path for the sample FASTQ file containing the target region    ####
-##################################################################################################
+########################################################################################################################
+#### Call script with                                                                                               ####
+#### sbatch --export=indir=INDIR,sz=SIZE,sampfq=SAMPLEFQ,trimb=TRIM5PRIME,trime=TRIM3PRIME make_peg_fastas_driver.s ####
+#### where                                                                                                          ####
+#### #### INDIR is full path for input directory containing outputs from PREREQS                                    ####
+#### #### SIZE is the number of pegRNAs to process in each job                                                      ####
+#### #### #### LIBRARY_SIZE / SIZE = NUM JOBS SUBMITTED                                                             ####
+#### #### SAMPLEFQ is the full path for the sample FASTQ file containing the target region                          ####
+#### #### TRIM5PRIME is the number of bases to remove from front/beginning of the read; expected number of bases    ####
+#### ####            before the target region begins in the read                                                    ####
+#### #### TRIM3PRIME is the number of bases to remove from the end of the read; expected number of bases after      ####
+#### ####            target region and barcode have already occurred in the read                                    ####
+########################################################################################################################
 
 module purge
 module load htslib/1.9
@@ -79,6 +89,6 @@ done
 
 for i in tmp_*
 do
-	sbatch --export=in1=${indir},in2=${sampfq},in3=${i} \
-	~/scripts/pegRNA/make_peg_fastas_mini.s
+	sbatch --export=sampfq=${sampfq},chnk=${i},trimb=${trimb},trime=${trime} \
+	~/scripts/pegRNA/make_peg_fastas_mini.s  #THIS PATH SHOULD UPDATED TO A LOCAL COPY
 done
