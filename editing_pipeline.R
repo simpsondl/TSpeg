@@ -24,15 +24,27 @@ option_list = list(make_option(c("-f", "--file"), type = "character",
                    make_option(c("-r","--replicate"), type = "integer",
                                default = NULL, action = "store",
                                help = "Replicate number [integer]"),
+                   make_option(c("-y","--maxcycle"), type = "integer",
+                               default = 80, action = "store",
+                               help = "Maximum cycle number where a barcode can end"),
                    make_option(c("-b","--barcode"), type = "character",
                                default = NULL, action = "store",
                                help = "Expected barcode for pegRNA"),
+                   make_option(c("-s","--bcstartpos"), type = "integer",
+                               default = 54, action = "store",
+                               help = "Expected cycle number where barcode begins in read"),
                    make_option(c("-m","--maxdist"), type = "integer",
                                default = 2, action = "store",
                                help = "Max mismatches allowed in barcode before filtering [default = %default]"),
                    make_option(c("-w","--targetregion"), type = "character",
                                default = NULL, action = "store",
                                help = "Expected target region for pegRNA"),
+                   make_option(c("-n","--trorientation"), type = "character",
+                               default = "forward", action = "store",
+                               help = "Whether target site in read is same orientation as in file (forward) or (reverse)"),
+                   make_option(c("-t","--trstartpos"), type = "integer",
+                               default = 7, action = "store",
+                               help = "Expected cycle number where target region begins in the read"),
                    make_option(c("-q","--minfreq"), type = "double",
                                default = 0.001, action = "store",
                                help = "Minimum frequncy for outcome filter [default = %default]"),
@@ -55,9 +67,13 @@ pegID <- opt$pegID #pegRNA ID string
 cl <- opt$cellline #cell line
 day <- paste0("Day ", opt$day) #collection day
 repl <- paste0("R", opt$replicate) #replicate
+max.pos <- opt$maxcycle #latest cycle in a read where a barcode is allowed to begin
 exp.bc <- opt$barcode #expected barcode sequence
+bc.start <- opt$bcstartpos #expected cycle in read where barcode begins
 max.dist <- opt$maxdist #max distance allowed in barcode
 exp.wtr <- opt$targetregion #expected wide target region
+wtr.start <- opt$trstartpos #expected cycle in read where target region begins
+orient <- opt$trorientation #orientation of target region in read
 min.freq <- opt$minfreq #minimum observed frequency to keep an outcome, %/100
 min.reads <- opt$altminreads #alternative outcome filter for low coverage (<10000x) pegs
 min.bq <- opt$basequal #minimum base quality to not correct to expected
@@ -132,24 +148,25 @@ reads <- readFastq(fq.path)
 print(paste0(length(reads), " reads imported. Performing barcode filtering..."))
 
 # Fuzzy match to expacted barcode
-bc.matches <- as.data.frame(as(vmatchPattern2(rc(exp.bc), sread(reads), max.mismatch = 8),
+bc.matches <- as.data.frame(as(vmatchPattern2(rc(exp.bc), sread(reads), max.mismatch = floor(nchar(exp.bc)/2)),
                             "CompressedIRangesList"))
 # Extract barcode match closest to expected position (bases 54 - 70)
+# DOUBLECHECK: CAN END BE end[which.min(abs(start - bc.start))]??
 bcs.sum <- bc.matches %>% 
                 group_by(group) %>% 
-                summarise(start = start[which.min(abs(start - 54))], end = start + 16)
+                summarise(start = start[which.min(abs(start - bc.start))], end = start + nchar(exp.bc) - 1)
 
 # Identify reads with no barcode match
 no.bc <- setdiff(1:length(reads), bcs.sum$group)
 # Identify reads with barcode match outside bounds of read
-too.deep <- setdiff(1:length(reads), bcs.sum$group[bcs.sum$end <= 80])
+too.deep <- setdiff(1:length(reads), bcs.sum$group[bcs.sum$end <= max.pos])
 too.early <- setdiff(1:length(reads), bcs.sum$group[bcs.sum$start >= 1])
 # Remove reads with no barcode match
 reads <- reads[setdiff(1:length(reads), c(no.bc, too.deep, too.early))]
-bcs.sum <- bcs.sum[bcs.sum$start >= 1 & bcs.sum$end <= 80,]
+bcs.sum <- bcs.sum[bcs.sum$start >= 1 & bcs.sum$end <= max.pos,]
 
 print(paste0("Removed ", length(no.bc), " reads with no barcode match"))
-print(paste0("Removed ", length(too.deep), " reads with barcode match too late in read (end position > 80)"))
+print(paste0("Removed ", length(too.deep), " reads with barcode match too late in read (end position > max.pos)"))
 print(paste0("Removed ", length(too.early), " reads with barcode match too early in read (start position < 1)"))
 
 
@@ -237,13 +254,13 @@ print("Step 1 - Barcode filtering - complete...")
 wtr.matches <- as.data.frame(as(vmatchPattern2(rc(exp.wtr), 
                                               sread(reads.filt),
                                               with.indels = TRUE,
-                                              max.mismatch = 18), #at least 60% seq identity 1-18/47
+                                              max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
                                "CompressedIRangesList"))
 
 # Extract WTR
 wtr.sum <- wtr.matches %>% 
   group_by(group) %>% 
-  summarise(start = start[which.min(abs(start - 7))], end = end[which.min(abs(start - 7))])
+  summarise(start = start[which.min(abs(start - wtr.start))], end = end[which.min(abs(start - wtr.start))])
 
 # Identify reads with no target region match
 no.wtr <- setdiff(1:length(reads.filt), wtr.sum$group)
@@ -260,7 +277,7 @@ wtr.unique <- wtr.sum %>% group_by(wtr) %>% summarise(N = n())
 wtr.unique$freq <- wtr.unique$N/sum(wtr.unique$N)
 
 # Set min freq to either min.freq (>10000x coverage) or 10 reads (<10000x)
-min.freq <- max(min.freq, 10/sum(wtr.unique$N))
+min.freq <- max(min.freq, min.reads/sum(wtr.unique$N))
 
 # Filter low frequency outcomes
 wtr.filt <- wtr.unique[wtr.unique$freq >= min.freq,]
