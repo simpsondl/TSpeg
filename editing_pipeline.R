@@ -251,11 +251,20 @@ print("Step 1 - Barcode filtering - complete...")
 ###############################################
 
 # Fuzzy match to expected wide target region (WTR)
-wtr.matches <- as.data.frame(as(vmatchPattern2(rc(exp.wtr), 
-                                              sread(reads.filt),
-                                              with.indels = TRUE,
-                                              max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
-                               "CompressedIRangesList"))
+if(orient == "forward"){
+  wtr.matches <- as.data.frame(as(vmatchPattern2(rc(exp.wtr), 
+                                                 sread(reads.filt),
+                                                 with.indels = TRUE,
+                                                 max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
+                                                 "CompressedIRangesList")))  
+} else {
+  wtr.matches <- as.data.frame(as(vmatchPattern2(exp.wtr, 
+                                                 sread(reads.filt),
+                                                 with.indels = TRUE,
+                                                 max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
+                                                 "CompressedIRangesList")))
+}
+
 
 # Extract WTR
 wtr.sum <- wtr.matches %>% 
@@ -270,7 +279,12 @@ reads.filt <- reads[setdiff(1:length(reads.filt), no.wtr)]
 print(paste0("Removed ", length(no.wtr), " reads with no match to target region..."))
 
 # Get WTR
-wtr.sum$wtr <- rc(str_sub(sread(reads.filt), wtr.sum$start,wtr.sum$end))
+if(orient == "forward"){
+  wtr.sum$wtr <- rc(str_sub(sread(reads.filt), wtr.sum$start,wtr.sum$end))  
+} else {
+  wtr.sum$wtr <- str_sub(sread(reads.filt), wtr.sum$start, wtr.sum$end)
+}
+
 
 # Get frequencies of unique outcomes
 wtr.unique <- wtr.sum %>% group_by(wtr) %>% summarise(N = n())
