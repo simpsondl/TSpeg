@@ -679,7 +679,7 @@ if("Outcome_1" %in% missing){
                           outcome.char)  
   } else {
     outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
-                                     HasIns = TRUE, HasDel = TRUE, freq = corrected.wtr$freq[i],
+                                     HasIns = FALSE, HasDel = TRUE, freq = corrected.wtr$freq[i],
                                      EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
                           outcome.char)
   }
@@ -690,7 +690,7 @@ still.missing <- as.numeric(gsub("Outcome_", "", setdiff(missing, "Outcome_1")))
 
 for(i in still.missing){
   outcome.char <- rbind(data.frame(id = paste0("Outcome_", i), HasEdit = 0, HasOtherMM = 0,
-                                   HasIns = TRUE, HasDel = TRUE, freq = corrected.wtr$freq[i],
+                                   HasIns = FALSE, HasDel = TRUE, freq = corrected.wtr$freq[i],
                                    EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
                         outcome.char)
 }
