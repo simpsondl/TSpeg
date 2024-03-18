@@ -572,7 +572,18 @@ if(nrow(mismatch.res) > 0 & nrow(insertion.res) > 0 & nrow(deletion.res) > 0){
 } else if(nrow(mismatch.res) == 0 & nrow(insertion.res) == 0 & nrow(deletion.res) > 0){
   all.edits <- deletion.res[,c("id","position", "edit", "freq","type")]
 } else if(nrow(mismatch.res) == 0 & nrow(insertion.res) == 0 & nrow(deletion.res) == 0){
-  print("ERROR: No editing detected...all reads are wildtype.")
+  print("ERROR: No editing detected...all reads are either wildtype or contain deletions only at edge of target site.")
+  
+  uetotal <- 0
+  wttotal <- 0
+  for(i in 1:nrow(corrected.wtr)){
+    if(corrected.wtr$wtr[i] == exp.wtr){
+      wttotal <- wttotal + corrected.wtr$freq[i]
+    } else {
+      uetotal <- uetotal + corrected.wtr$freq[i]
+    }
+  }
+  
   print("Saving statistics and flag to file...")
   
   write.table(data.frame(pegID = pegID,
@@ -580,21 +591,21 @@ if(nrow(mismatch.res) > 0 & nrow(insertion.res) > 0 & nrow(deletion.res) > 0){
                          Day = day,
                          Replicate = repl,
                          TotalReads = sum(corrected.wtr$N),
-                         Freq.WildType = corrected.wtr$freq[1],
+                         Freq.WildType = wttotal,
                          Freq.TotalEdited = 0,
-                         Freq.TotalOffTarget = 0,
+                         Freq.TotalOffTarget = uetotal,
                          Freq.EditOnly = 0,
                          Freq.EditPlusOtherMM = 0,
                          Freq.OtherMMOnly = 0,
                          Freq.EditPlusInsertion = 0,
                          Freq.InsertionOnly = 0,
                          Freq.EditPlusDeletion = 0,
-                         Freq.DeletionOnly = 0),
+                         Freq.DeletionOnly = uetotal),
               paste0(out.path,"/summarized_outcomes_",pegID,".txt"),
               sep = "\t", quote = F, col.names = T, row.names = F)
   
   # Save error to flag file
-  writeLines(c(paste(pegID, cl, day, repl, "NO EDITING DETECTED - ALL READS WILDTYPE", sep = "\t")),
+  writeLines(c(paste(pegID, cl, day, repl, "NO EDITING DETECTED - ALL READS WILDTYPE OR CONTAIN EDGE DELETIONS", sep = "\t")),
              paste0(out.path,"/flag_",pegID,".txt"))
   
   print(paste0(pegID, " analyzed. Script stopped early due to no edits passing filters. Script complete."))
@@ -659,33 +670,59 @@ outcome.char$EditOtherMM <- outcome.char$HasEdit > 0 &
 outcome.char$OtherOnly <- outcome.char$HasEdit == 0 &
                             !outcome.char$HasIns & !outcome.char$HasDel
 
+missing <- setdiff(corrected.wtr$id, outcome.char$id)
+if("Outcome_1" %in% missing){
+  if(corrected.wtr$wtr[corrected.wtr$id == "Outcome_1"] == exp.wtr){
+    outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
+                                     HasIns = FALSE, HasDel = FALSE, freq = corrected.wtr$freq[1],
+                                     EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = FALSE),
+                          outcome.char)  
+  } else {
+    outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
+                                     HasIns = TRUE, HasDel = TRUE, freq = corrected.wtr$freq[i],
+                                     EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
+                          outcome.char)
+  }
+  
+}
+
+still.missing <- as.numeric(gsub("Outcome_", "", setdiff(missing, "Outcome_1")))
+
+for(i in still.missing){
+  outcome.char <- rbind(data.frame(id = paste0("Outcome_", i), HasEdit = 0, HasOtherMM = 0,
+                                   HasIns = TRUE, HasDel = TRUE, freq = corrected.wtr$freq[i],
+                                   EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
+                        outcome.char)
+}
+
 outcome.char <- outcome.char[order(as.numeric(gsub("Outcome_","", outcome.char$id))),]
-outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
-                                 HasIns = FALSE, HasDel = FALSE, freq = corrected.wtr$freq[1],
-                                 EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = FALSE),
-                      outcome.char)
 
 # Calculate frequencies of different editing event combinations
 ### Edit only
-eonly <- sum(outcome.char$freq[outcome.char$EditOnly])
+#eonly <- sum(outcome.char$freq[outcome.char$EditOnly])
 ### Edit + other mm
-eother <- sum(outcome.char$freq[outcome.char$EditOtherMM])
+#eother <- sum(outcome.char$freq[outcome.char$EditOtherMM])
 ### Other mm only
-oonly <- sum(outcome.char$freq[outcome.char$OtherOnly])
+#oonly <- sum(outcome.char$freq[outcome.char$OtherOnly])
 ### Edit + ins
-insedit <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit > 0])
+#insedit <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit > 0])
 ### Ins only
-insonly <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit == 0])
+#insonly <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit == 0])
 ### Edit + del
-deledit <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit > 0])
+#deledit <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit > 0])
 ### Del only
-delonly <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit == 0])
+#delonly <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit == 0])
 ### Frequency of intended edit
-etotal <- sum(outcome.char$freq[outcome.char$HasEdit > 0])
+eonly <- sum(outcome.char$freq[outcome.char$EditOnly])
 ### Frequency of unintended edits alone
-uetotal <- sum(outcome.char$freq[outcome.char$HasEdit == 0 & outcome.char$id != "Outcome_1"])
+uetotal <- sum(outcome.char$freq[(outcome.char$HasOtherMM > 0 |
+                                    outcome.char$HasIns |
+                                    outcome.char$HasDel)])
 ### Frequency of WT (no edit)
-wttotal <- corrected.wtr$freq[1]
+wttotal <- sum(outcome.char$freq[outcome.char$HasEdit == 0 & 
+                                   outcome.char$HasOtherMM == 0 &
+                                   !outcome.char$HasIns &
+                                   !outcome.char$HasDel])
 
 # Prepare data for plotting
 # Set column with base after editing
