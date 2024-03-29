@@ -68,32 +68,32 @@ While the full pipeline is intended to be run on a SLURM HPC environment, the fi
 2. Run the following commands, one for each epegRNA to be analyzed. Adjust file path to the fastq file as needed. An output directory (specified by the --output option) will be created for each epegRNA.
    ```
    Rscript editing_pipeline.R \
---file peg_fastas/BPIFA2_484_5GtoC_13_12_D_4_1_d7.fq \
---pegID BPIFA2_484_5GtoC_13_12 \
---cellline PEmaxKO \
---day 7 \
---replicate 1 \
---barcode GTTATGTCCAGACCAGC \
---targetregion TCTGCTTGGCCAGTTGCCAAGCACTGGATTTCTGAAGCACTCCAGCT \
---output BPIFA2_484_5GtoC_13_12
+   --file peg_fastas/BPIFA2_484_5GtoC_13_12_D_4_1_d7.fq \
+   --pegID BPIFA2_484_5GtoC_13_12 \
+   --cellline PEmaxKO \
+   --day 7 \
+   --replicate 1 \
+   --barcode GTTATGTCCAGACCAGC \
+   --targetregion TCTGCTTGGCCAGTTGCCAAGCACTGGATTTCTGAAGCACTCCAGCT \
+   --output BPIFA2_484_5GtoC_13_12
 
-Rscript editing_pipeline.R \
---file peg_fastas/ZNF514_60_5GtoC_15_20_D_4_1_d7.fq \
---pegID ZNF514_60_5GtoC_15_20 \
---cellline PEmaxKO \
---day 7 \
---replicate 1 \
---barcode AAAGGTGCCGTCCTGAT \
---targetregion AGAACTTCAGGAACTTGGCCATTCTGGGTGAGCACAAGCCCTCAGCT \
---output ZNF514_60_5GtoC_15_20
+   Rscript editing_pipeline.R \
+   --file peg_fastas/ZNF514_60_5GtoC_15_20_D_4_1_d7.fq \
+   --pegID ZNF514_60_5GtoC_15_20 \
+   --cellline PEmaxKO \
+   --day 7 \
+   --replicate 1 \
+   --barcode AAAGGTGCCGTCCTGAT \
+   --targetregion AGAACTTCAGGAACTTGGCCATTCTGGGTGAGCACAAGCCCTCAGCT \
+   --output ZNF514_60_5GtoC_15_20
 
-Rscript editing_pipeline.R \
---file peg_fastas/HVCN1_175_5GtoC_13_10_D_4_1_d7.fq \
---pegID HVCN1_175_5GtoC_13_10 \
---cellline PEmaxKO \
---day 7 \
---replicate 1 \
---barcode AAACTGTTATTGGCGTC \
---targetregion CCATGGCAGCATAGTTATTCTTGTCGGGCTGGATGATCTTCAGAGCT \
---output HVCN1_175_5GtoC_13_10
+   Rscript editing_pipeline.R \
+   --file peg_fastas/HVCN1_175_5GtoC_13_10_D_4_1_d7.fq \
+   --pegID HVCN1_175_5GtoC_13_10 \
+   --cellline PEmaxKO \
+   --day 7 \
+   --replicate 1 \
+   --barcode AAACTGTTATTGGCGTC \
+   --targetregion CCATGGCAGCATAGTTATTCTTGTCGGGCTGGATGATCTTCAGAGCT \
+   --output HVCN1_175_5GtoC_13_10
    ```
