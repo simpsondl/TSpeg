@@ -1,0 +1,2 @@
+pegID	CellLine	Day	Replicate	Qual.Dist.Cor	Coverage	No.BC.Detected	N.BC.Filter	N.BC.Survive	N.Outcomes	N.LowFreqOutcomes	N.Outcomes.Survive	N.CorrectedBases	N.CorrectedReads	N.CorrectedOutcomes
+ZNF514_60_5GtoC_15_20	PEmaxKO	Day 7	R1	-0.309	5103	49	133	4921	371	348	23	15	546	8
