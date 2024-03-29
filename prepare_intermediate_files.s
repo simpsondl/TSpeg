@@ -68,10 +68,10 @@ cd $indir
 samp=`basename $indir`
 
 ### Create readmap files for each bam
-### Uses samtools to view only mapped reads, then pulls relevant columns
+### Uses samtools to pull relevant columns
 for i in *bam
 do
-	samtools view -F 4 $i | cut -f1,3 > ${i%%.bam}.readmap
+	samtools view $i | cut -f1,3 > ${i%%.bam}.readmap
 done
 
 ### Extract mapped read ids with no recombination
