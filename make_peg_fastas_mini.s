@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=12:00:00
-#SBATCH --mem=50G
+#SBATCH --time=1:00:00
+#SBATCH --mem=16G
 #SBATCH --job-name="makepegfq"
 #SBATCH --output=/Genomics/grid/users/ds65/logs/%x-%j.out
 
@@ -58,10 +58,10 @@ do
 		continue; 
 	else 
 		grep $p ${samp}_tokeep.txt | cut -f1 > keeptmp_${ndx}; 
-		~/tools/seqtk/seqtk subseq \
+		~/tools/seqtk/seqtk subseq \ # THIS SHOULD BE UPDATED TO A LOCAL COPY
 		$sampfq \
 		keeptmp_${ndx} > peg_fastas/untrimmed/${p}_${samp}.fq;
-		~/tools/seqtk/seqtk trimfq -b $trimb -e $trime peg_fastas/untrimmed/${p}_${samp}.fq \
+		~/tools/seqtk/seqtk trimfq -b $trimb -e $trime peg_fastas/untrimmed/${p}_${samp}.fq \ # THIS SHOULD BE UPDATED TO A LOCAL COPY
 		> peg_fastas/trimmed/${p}_${samp}_trimmed.fq
 	fi; 
 done < $chnk
