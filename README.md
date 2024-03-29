@@ -7,4 +7,4 @@ Run the scripts in the following order to process self-targeting library data.
 1. bowtie2_align.s
 2. prepare_intermediate_files.s
 3. make_peg_fastas_driver.s
-4. find_outcomes_driver.s
+4. find_outcomes_lDS004_driver.s
