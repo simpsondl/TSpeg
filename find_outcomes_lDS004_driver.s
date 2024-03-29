@@ -4,7 +4,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --mem=8G
 #SBATCH --job-name="outcome_driver"
-#SBATCH --output=/Genomics/grid/users/ds65/logs/peg_outcomes/%x-%j.out
+#SBATCH --output=%x-%j.out
 
 #############################################
 # Purpose: Script calls editing outcome     #
@@ -39,14 +39,14 @@ do
 	bc=`grep $id $peginfo | cut -f2`
 	tr=`grep $id $peginfo | cut -f3`
 
-	out=/Genomics/adamsonlab/data/HTS_data/HTS_AC014/editing_outcomes/${samp}/${id}
+	out=editing_outcomes/${samp}/${id}
 	mkdir -p $out
 
 	echo Submitting job for pegRNA $id for sample $samp
 	echo Expected barcode is $bc
 	echo Expected target region $tr
 
-	sbatch --export=fq=$i,id=$id,cl=$cl,day=$day,repl=$repl,bc=$bc,tr=$tr,out=$out /Genomics/grid/users/ds65/scripts/pegRNA/find_outcomes_lDS004_submit.s
+	sbatch --export=fq=$i,id=$id,cl=$cl,day=$day,repl=$repl,bc=$bc,tr=$tr,out=$out ../find_outcomes_lDS004_submit.s
 done	
 	
 timeend=`date`
