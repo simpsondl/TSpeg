@@ -10,7 +10,7 @@ Run the scripts in the following order to process self-targeting library data. D
 4. find_outcomes_lDS004_driver.s
 
 ### Required hardware and software
-To run the full pipeline requires a SLURM HPC environment (see section "Running Full Pipeline on Demo Data" for details). Instructions for calculating individual epegRNA editing efficiencies with just a local R installation are given in section "Running Edit Characterization Locally" below.  
+To run the full pipeline requires a SLURM HPC environment (see section "Running Full Pipeline on Demo Data" for details). Instructions for calculating individual epegRNA editing efficiencies with just a local R installation are given in section "Running Edit Characterization Locally" below (tested on Windows 11, macOS Ventura, and macOS Sonoma).  
 
 This pipeline was developed and tested on Slurm 18.08.8 but should be compatible with other versions. Pipeline has been tested using R version 3.6.1 as well as version 4.2.0; compatability with other versions is likely but not guaranteed.
 
