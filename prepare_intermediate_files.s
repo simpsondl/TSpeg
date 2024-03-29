@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
-#SBATCH --time=12:00:00
-#SBATCH --mem=50G
+#SBATCH --time=1:00:00
+#SBATCH --mem=16G
 #SBATCH --job-name="makeintermediates"
 #SBATCH --output=%x-%j.out
 
