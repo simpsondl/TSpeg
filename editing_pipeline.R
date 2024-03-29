@@ -88,6 +88,11 @@ if(is.null(opt$file) | is.null(opt$pegID) | is.null(opt$cellline) |
   quit(save = "no")
 }
 
+# Check if output directory exists and create if not
+if(!dir.exists(out.path)){
+  dir.create(out.path)
+}
+
 # Extract intended edit from pegID
 int.edit <- gsub("^[^_]*_[^_]*_","", pegID)
 int.edit <- gsub("_.*","", int.edit)
@@ -149,12 +154,12 @@ print(paste0(length(reads), " reads imported. Performing barcode filtering..."))
 
 # Fuzzy match to expacted barcode
 bc.matches <- as.data.frame(as(vmatchPattern2(rc(exp.bc), sread(reads), max.mismatch = floor(nchar(exp.bc)/2)),
-                            "CompressedIRangesList"))
+                               "CompressedIRangesList"))
 # Extract barcode match closest to expected position (bases 54 - 70)
 # DOUBLECHECK: CAN END BE end[which.min(abs(start - bc.start))]??
 bcs.sum <- bc.matches %>% 
-                group_by(group) %>% 
-                summarise(start = start[which.min(abs(start - bc.start))], end = start + nchar(exp.bc) - 1)
+  group_by(group) %>% 
+  summarise(start = start[which.min(abs(start - bc.start))], end = start + nchar(exp.bc) - 1)
 
 # Identify reads with no barcode match
 no.bc <- setdiff(1:length(reads), bcs.sum$group)
@@ -171,7 +176,7 @@ print(paste0("Removed ", length(too.early), " reads with barcode match too early
 
 
 # Get barcode
-bcs.sum$bc <- rc(str_sub(sread(reads), bcs.sum$start,bcs.sum$end))
+bcs.sum$bc <- rc(str_sub(as.character(sread(reads)), bcs.sum$start,bcs.sum$end))
 # Get distance to expected barcode, use optimal string alignment to allow for indels
 bcs.sum$dist <- stringdist(bcs.sum$bc, exp.bc)
 
@@ -222,21 +227,21 @@ dist_length <- function(x){
 }
 
 bc.qual.plt <- ggplot(bcs.sum, aes(dist, mean)) + geom_boxplot() +
-                  theme_bw() + xlab("Number of mismatches in barcode") +
-                  ylab("Average base sequence quality in barcode") +
-                  ggtitle(paste0("Barcode Quality for ", gene.name, 
-                                 " - Edit +",des.pos,":",des.edit, " - ", cl,
-                                 " - ", day, " - ", repl)) +
-                  stat_summary(aes(x = dist),
-                               fun.data = dist_length, 
-                               geom = "text",
-                               size = 3) + 
-                  annotate(geom = "text", x = as.character(bc.max.dist), y = 35, 
-                           label = paste0("PCC = ", mean.dist.cor),
-                           size = 6, hjust = 1) +
-                  theme(panel.grid.major = element_blank(),
-                        panel.grid.minor = element_blank(),
-                        panel.background = element_blank())
+  theme_bw() + xlab("Number of mismatches in barcode") +
+  ylab("Average base sequence quality in barcode") +
+  ggtitle(paste0("Barcode Quality for ", gene.name, 
+                 " - Edit +",des.pos,":",des.edit, " - ", cl,
+                 " - ", day, " - ", repl)) +
+  stat_summary(aes(x = dist),
+               fun.data = dist_length, 
+               geom = "text",
+               size = 3) + 
+  annotate(geom = "text", x = as.character(bc.max.dist), y = 35, 
+           label = paste0("PCC = ", mean.dist.cor),
+           size = 6, hjust = 1) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank())
 
 ggsave(paste0(out.path, "/barcode_quality_",pegID,".pdf"),
        bc.qual.plt,
@@ -251,20 +256,19 @@ print("Step 1 - Barcode filtering - complete...")
 ###############################################
 
 # Fuzzy match to expected wide target region (WTR)
-if(orient == "forward"){
+if(orient == "f"){
   wtr.matches <- as.data.frame(as(vmatchPattern2(rc(exp.wtr), 
                                                  sread(reads.filt),
                                                  with.indels = TRUE,
-                                                 max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
-                                                 "CompressedIRangesList")))  
+                                                 max.mismatch = floor(.4*nchar(exp.wtr))), #at least 60% seq identity 
+                                                 "CompressedIRangesList"))  
 } else {
   wtr.matches <- as.data.frame(as(vmatchPattern2(exp.wtr, 
                                                  sread(reads.filt),
                                                  with.indels = TRUE,
-                                                 max.mismatch = floor(.4*nchar(exp.wtr)), #at least 60% seq identity 
-                                                 "CompressedIRangesList")))
+                                                 max.mismatch = floor(.4*nchar(exp.wtr))), #at least 60% seq identity 
+                                                 "CompressedIRangesList"))
 }
-
 
 # Extract WTR
 wtr.sum <- wtr.matches %>% 
@@ -279,7 +283,7 @@ reads.filt <- reads[setdiff(1:length(reads.filt), no.wtr)]
 print(paste0("Removed ", length(no.wtr), " reads with no match to target region..."))
 
 # Get WTR
-if(orient == "forward"){
+if(orient == "f"){
   wtr.sum$wtr <- rc(str_sub(sread(reads.filt), wtr.sum$start,wtr.sum$end))  
 } else {
   wtr.sum$wtr <- str_sub(sread(reads.filt), wtr.sum$start, wtr.sum$end)
@@ -457,6 +461,11 @@ print("Step 2 - Correcting and collapsing outcomes - is complete...")
 ### STEP 3 -  Characterize Outcomes ###
 #######################################
 
+wtrfreqfp <- paste0(out.path, "/corrected_outcome_frequencies_", pegID, ".txt")
+print(getwd())
+print(wtrfreqfp)
+corrected.wtr <- read.delim(wtrfreqfp)
+
 print("Characterizing outcomes...")
 
 for(i in 1:nrow(corrected.wtr)){
@@ -486,7 +495,7 @@ for(i in 1:nrow(corrected.wtr)){
   
   if(nrow(insertions) != 0){
     for(j in 1:nrow(insertions)){
-      insertions$edit[j] <- paste("+",str_sub(pattern(tmp.align), insertions$start[j], insertions$end[j]), 
+      insertions$edit[j] <- paste("+",str_sub(as.character(pattern(tmp.align)), insertions$start[j], insertions$end[j]), 
                                   collapse = "")
     }
     # Correct position to be relative to the cut site
@@ -511,7 +520,7 @@ for(i in 1:nrow(corrected.wtr)){
   
   if(nrow(deletions) != 0){
     for(j in 1:nrow(deletions)){
-      deletions$edit[j] <- paste("-",str_sub(subject(tmp.align), deletions$start[j], deletions$end[j]), 
+      deletions$edit[j] <- paste("-",str_sub(as.character(subject(tmp.align)), deletions$start[j], deletions$end[j]), 
                                  collapse = "")
     }
     # Correct position to be relative to the cut site
@@ -572,10 +581,9 @@ if(nrow(mismatch.res) > 0 & nrow(insertion.res) > 0 & nrow(deletion.res) > 0){
 } else if(nrow(mismatch.res) == 0 & nrow(insertion.res) == 0 & nrow(deletion.res) > 0){
   all.edits <- deletion.res[,c("id","position", "edit", "freq","type")]
 } else if(nrow(mismatch.res) == 0 & nrow(insertion.res) == 0 & nrow(deletion.res) == 0){
-  print("ERROR: No editing detected...all reads are either wildtype or contain deletions only at edge of target site.")
-  
   uetotal <- 0
   wttotal <- 0
+  eonly <- 0
   for(i in 1:nrow(corrected.wtr)){
     if(corrected.wtr$wtr[i] == exp.wtr){
       wttotal <- wttotal + corrected.wtr$freq[i]
@@ -584,29 +592,20 @@ if(nrow(mismatch.res) > 0 & nrow(insertion.res) > 0 & nrow(deletion.res) > 0){
     }
   }
   
-  print("Saving statistics and flag to file...")
+  print("ERROR: No editing detected...")
+  print("Saving statistics to file...")
   
   write.table(data.frame(pegID = pegID,
                          CellLine = cl,
                          Day = day,
                          Replicate = repl,
                          TotalReads = sum(corrected.wtr$N),
-                         Freq.WildType = wttotal,
-                         Freq.TotalEdited = 0,
+                         Freq.TotalWildType = wttotal,
                          Freq.TotalOffTarget = uetotal,
-                         Freq.EditOnly = 0,
-                         Freq.EditPlusOtherMM = 0,
-                         Freq.OtherMMOnly = 0,
-                         Freq.EditPlusInsertion = 0,
-                         Freq.InsertionOnly = 0,
-                         Freq.EditPlusDeletion = 0,
-                         Freq.DeletionOnly = uetotal),
+                         Freq.EditOnly = eonly,
+			 Freq.Sum = wttotal + uetotal + eonly),
               paste0(out.path,"/summarized_outcomes_",pegID,".txt"),
               sep = "\t", quote = F, col.names = T, row.names = F)
-  
-  # Save error to flag file
-  writeLines(c(paste(pegID, cl, day, repl, "NO EDITING DETECTED - ALL READS WILDTYPE OR CONTAIN EDGE DELETIONS", sep = "\t")),
-             paste0(out.path,"/flag_",pegID,".txt"))
   
   print(paste0(pegID, " analyzed. Script stopped early due to no edits passing filters. Script complete."))
   
@@ -644,44 +643,47 @@ print("Summarizing editing outcomes...")
 
 # Summarize across outcomes
 edits.sum <- all.edits %>% 
-              group_by(position, edit, type) %>% 
-              summarise(freq = sum(freq), 
-                        N = n(), 
-                        cooccur = any(cooccur),
-                        only.co = sum(cooccur) == n())
+  group_by(position, edit, type) %>% 
+  summarise(freq = sum(freq), 
+            N = n(), 
+            cooccur = any(cooccur),
+            only.co = sum(cooccur) == n())
 edits.sum$type <- factor(edits.sum$type, 
                          levels = unique(edits.sum$type)[order(unique(edits.sum$type), decreasing = TRUE)]) 
 
 # Summarize types of edits for each outcome
 outcome.char <- all.edits %>% 
-                  group_by(id) %>% 
-                  summarise(HasEdit = sum(IsEdit), 
-                            HasOtherMM = sum(!IsEdit & type == "Mismatch"), 
-                            HasIns = sum(type == "Insertion") > 0, 
-                            HasDel = sum(type == "Deletion") > 0, 
-                            freq = freq)
+  group_by(id) %>% 
+  summarise(HasEdit = sum(IsEdit), 
+            HasOtherMM = sum(!IsEdit & type == "Mismatch"), 
+            HasIns = sum(type == "Insertion") > 0, 
+            HasDel = sum(type == "Deletion") > 0, 
+            freq = freq)
 outcome.char <- unique(outcome.char)
 outcome.char$EditOnly <- outcome.char$HasEdit > 0 & 
-                          outcome.char$HasOtherMM == 0 & 
-                          !outcome.char$HasIns & !outcome.char$HasDel
+  outcome.char$HasOtherMM == 0 & 
+  !outcome.char$HasIns & !outcome.char$HasDel
 outcome.char$EditOtherMM <- outcome.char$HasEdit > 0 & 
-                              outcome.char$HasOtherMM > 0 &
-                              !outcome.char$HasIns & !outcome.char$HasDel
+  outcome.char$HasOtherMM > 0 &
+  !outcome.char$HasIns & !outcome.char$HasDel
 outcome.char$OtherOnly <- outcome.char$HasEdit == 0 &
-                            !outcome.char$HasIns & !outcome.char$HasDel
+  !outcome.char$HasIns & !outcome.char$HasDel
+
+outcome.char$id <- as.character(outcome.char$id)
 
 missing <- setdiff(corrected.wtr$id, outcome.char$id)
 if("Outcome_1" %in% missing){
   if(corrected.wtr$wtr[corrected.wtr$id == "Outcome_1"] == exp.wtr){
     outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
                                      HasIns = FALSE, HasDel = FALSE, freq = corrected.wtr$freq[1],
-                                     EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = FALSE),
-                          outcome.char)  
+                                     EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = FALSE,
+                                     stringsAsFactors = FALSE),
+                          as.data.frame(outcome.char))  
   } else {
     outcome.char <- rbind(data.frame(id = "Outcome_1", HasEdit = 0, HasOtherMM = 0,
                                      HasIns = FALSE, HasDel = TRUE, freq = corrected.wtr$freq[i],
                                      EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
-                          outcome.char)
+                          as.data.frame(outcome.char))
   }
   
 }
@@ -692,28 +694,15 @@ for(i in still.missing){
   outcome.char <- rbind(data.frame(id = paste0("Outcome_", i), HasEdit = 0, HasOtherMM = 0,
                                    HasIns = FALSE, HasDel = TRUE, freq = corrected.wtr$freq[i],
                                    EditOnly = FALSE, EditOtherMM = FALSE, OtherOnly = TRUE),
-                        outcome.char)
+                        as.data.frame(outcome.char))
 }
 
 outcome.char <- outcome.char[order(as.numeric(gsub("Outcome_","", outcome.char$id))),]
 
 # Calculate frequencies of different editing event combinations
 ### Edit only
-#eonly <- sum(outcome.char$freq[outcome.char$EditOnly])
-### Edit + other mm
-#eother <- sum(outcome.char$freq[outcome.char$EditOtherMM])
-### Other mm only
-#oonly <- sum(outcome.char$freq[outcome.char$OtherOnly])
-### Edit + ins
-#insedit <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit > 0])
-### Ins only
-#insonly <- sum(outcome.char$freq[outcome.char$HasIns & outcome.char$HasEdit == 0])
-### Edit + del
-#deledit <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit > 0])
-### Del only
-#delonly <- sum(outcome.char$freq[outcome.char$HasDel & outcome.char$HasEdit == 0])
-### Frequency of intended edit
 eonly <- sum(outcome.char$freq[outcome.char$EditOnly])
+
 ### Frequency of unintended edits alone
 uetotal <- sum(outcome.char$freq[(outcome.char$HasOtherMM > 0 |
                                     outcome.char$HasIns |
@@ -747,287 +736,14 @@ outcome.char$Replicate <- repl
 print("Saving outcomes...")
 
 # Save outputs
-write.table(all.edits[,c("pegID","CellLine","Day","Replicate","id", "position", "edit",
-                         "type","freq", "IsEdit","cooccur")], 
-            paste0(out.path, "/characterized_outcomes_",pegID,".txt"),
-            sep = "\t", quote = F, col.names = T, row.names = F)
-write.table(edits.sum[,c("pegID","CellLine","Day","Replicate", "position", "edit",
-                         "type", "freq", "N", "cooccur", "only.co", "alt.base")], 
-            paste0(out.path, "/characterized_outcomes_",pegID,"_summary.txt"),
-            sep = "\t", quote = F, col.names = T, row.names = F)
-write.table(outcome.char[,c("pegID","CellLine","Day","Replicate","id","HasEdit","HasOtherMM",
-                            "HasIns","HasDel","freq","EditOnly","EditOtherMM","OtherOnly")],
-            paste0(out.path, "/outcome_characteristics_",pegID,"_summary.txt"),
-            sep = "\t", quote = F, col.names = T, row.names = F)
 write.table(data.frame(pegID = pegID,
                        CellLine = cl,
                        Day = day,
                        Replicate = repl,
                        TotalReads = sum(corrected.wtr$N),
                        Freq.TotalWildType = wttotal,
-                       Freq.TotalEdited = etotal,
                        Freq.TotalOffTarget = uetotal,
                        Freq.EditOnly = eonly,
-                       Freq.EditPlusOtherMM = eother,
-                       Freq.OtherMMOnly = oonly,
-                       Freq.EditPlusInsertion = insedit,
-                       Freq.InsertionOnly = insonly,
-                       Freq.EditPlusDeletion = deledit,
-                       Freq.DeletionOnly = delonly),
+		       Freq.Sum = wttotal + uetotal + eonly),
             paste0(out.path,"/summarized_outcomes_",pegID,".txt"),
             sep = "\t", quote = F, col.names = T, row.names = F)
-
-if(sum(edits.sum$type == "Deletion") > 10 | sum(edits.sum$type == "Insertion") > 10){
-  # Save error to flag file
-  writeLines(c(paste(pegID, cl, day, repl, "HIGH INDELS ( > 10 ) - EDITS NOT PLOTTED", sep = "\t")),
-             paste0(out.path,"/flag_",pegID,".txt"))
-  
-  print(paste0(pegID, " analyzed. Script stopped early due more than 10 insertions or 10 deletions present; edits not plotted. Script complete."))
-  
-  quit(save = "no")
-}
-
-print("Plotting outcomes...")
-
-# Colors for x-axis
-# Blue for protospacer, red for target base, green for RT template
-# Note that the RT template starts at position +1, overlapping the protospacer
-axis.colors <- c(rep("black", 5), 
-                 rep("dodgerblue4", 19), 
-                 "forestgreen", 
-                 "firebrick", 
-                 rep("forestgreen",as.numeric(gsub(".*_","",pegID))-5))
-axis.colors <- c(axis.colors, rep("black",47-length(axis.colors)))
-
-# Colors for edit types
-# Sourced from wesanderson palettes r package
-mismatch.colors <- c(A = "#00A08A", C = "#046C9A", G = "#F98400", T = "#B40F20")
-insertion.colors <- c("#ECCBAE", "#046C9A", "#D69C4E", "#ABDDDE", "#000000",
-                      "#DD8D29", "#E2D200", "#46ACC8", "#E58601", "#B40F20")
-deletion.colors <- c("#E1BD6D", "#EABE94", "#0B775E", "#35274A" ,"#F2300F",
-                     "#DD8D29", "#E2D200", "#46ACC8", "#E58601", "#B40F20")
-
-# Co-occurence dfs
-# These are needed to place the red/gray stars underneath outcomes which
-# indicate co-occurence of an edit with the intended edit, little messy
-if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Mismatch") > 0 &
-   sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Mismatch") > 0){
-  cooccur.mm <- rbind(data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Mismatch","position"],
-                                 y = -0.02,
-                                 label = '*'),
-                      data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Mismatch","position"],
-                                 y = -0.02,
-                                 label = '+'))
-} else if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Mismatch") > 0){
-  cooccur.mm <- data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Mismatch","position"],
-                           y = -0.02,
-                           label = '*')
-} else if(sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Mismatch") > 0){
-  cooccur.mm <- data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Mismatch","position"],
-                           y = -0.02,
-                           label = '+')
-} else {
-  cooccur.mm <- NA
-}
-if(!is.null(nrow(cooccur.mm))){
-  cooccur.mm$color <- ifelse(cooccur.mm$label == "*", "red", "#999999")  
-}
-
-
-if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Insertion") > 0 &
-   sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Insertion") > 0){
-  cooccur.ins <- rbind(data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Insertion","position"],
-                                  y = -0.02,
-                                  label = '*'),
-                       data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Insertion","position"],
-                                  y = -0.02,
-                                  label = '+'))
-} else if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Insertion") > 0){
-  cooccur.ins <- data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Insertion","position"],
-                            y = -0.02,
-                            label = '*')
-} else if(sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Insertion") > 0){
-  cooccur.ins <- data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Insertion","position"],
-                            y = -0.02,
-                            label = '+')
-} else {
-  cooccur.ins <- NA
-}
-if(!is.null(nrow(cooccur.ins))){
-  cooccur.ins$color <- ifelse(cooccur.ins$label == "*", "red", "#999999")
-}
-
-if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Deletion") > 0 &
-   sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Deletion") > 0){
-  cooccur.del <- rbind(data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Deletion","position"],
-                                  y = -0.02,
-                                  label = '*'),
-                       data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Deletion","position"],
-                                  y = -0.02,
-                                  label = '+'))
-} else if(sum(edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Deletion") > 0){
-  cooccur.del <- data.frame(x = edits.sum[edits.sum$cooccur & edits.sum$only.co & edits.sum$type == "Deletion","position"],
-                            y = -0.02,
-                            label = '*')
-} else if(sum(edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Deletion") > 0){
-  cooccur.del <- data.frame(x = edits.sum[edits.sum$cooccur & !edits.sum$only.co & edits.sum$type == "Deletion","position"],
-                            y = -0.02,
-                            label = '+')
-} else {
-  cooccur.del <- NA
-}
-if(!is.null(nrow(cooccur.del))){
-  cooccur.del$color <- ifelse(cooccur.del$label == "*", "red", "#999999")
-}
-
-
-# Creates a list of plots, one for each edit type found
-ggList <- lapply(split(edits.sum, edits.sum$type), function(i){
-            ggplot(i, aes(position, freq, group = 1, fill = alt.base)) +
-              geom_bar(stat = "identity", width = 1) +
-              theme_bw() +
-              facet_grid(type ~ .) +
-              geom_hline(yintercept = .01, color = "black", linetype = "dotted") +
-              geom_text(aes(label = N), size = 3, vjust = -.4) +
-              expand_limits(y = max(edits.sum$freq) + 0.05) +
-              scale_x_continuous(breaks = c(-21:-1,1:26),
-                                 labels = paste(c(-21:-1,1:26),str_split(exp.wtr, "")[[1]], sep = "\n"),
-                                 limits = c(-21.5,26.5)) +
-              theme(axis.text.x = element_text(size = 6, color = axis.colors),
-                    panel.grid = element_blank(),
-                    panel.background = element_blank()) +
-              xlab("") + ylab("") 
-})
-
-# Modify plots generated by lapply depending on which ones are present
-
-if(!is.null(ggList$Mismatch)){
-  # Mismatch plot gets plot title
-  ggList$Mismatch <- ggList$Mismatch + 
-    annotate(geom = "text", x = 25, y = .55, 
-             label = paste0("Desired edit (+", 
-                            des.pos, ":", des.edit, 
-                            ") only: ", round(eonly* 100,2), "%"), 
-             size = 3, hjust = 1) + 
-    annotate(geom = "text", x = 25, y = .48, 
-             label = paste0("Desired edit + other mismatch: ", round(eother*100,2), "%"), 
-             size = 3, hjust = 1) + 
-    annotate(geom = "text", x = 25, y = .41, 
-             label = paste0("Other mismatch only: ", round(oonly*100,2), "%"), 
-             size = 3, hjust = 1) + 
-    annotate(geom = "text", x = -20, y = .55,
-             label = paste0("Total with desired edit: ", round(etotal*100,2), "%"),
-             size = 3, hjust = 0) +
-    annotate(geom = "text", x = -20, y = .48,
-             label = paste0("Total off-target edit: ", round(uetotal*100,2), "%"),
-             size = 3, hjust = 0) +
-    annotate(geom = "text", x = -20, y = .41,
-             label = paste0("Total wildtype: ", round(wttotal*100,2), "%"),
-             size = 3, hjust = 0) +
-    annotate(geom = "text", x = -20, y = .34,
-             label = paste0("Total reads: ", sum(corrected.wtr$N)),
-             size = 3, hjust = 0) +
-    labs(fill = "Base after\nEditing") +
-    scale_fill_manual(values = mismatch.colors, limits = force) +
-    ggtitle(paste0("Editing Outcomes for ", gene.name, 
-                   " - Edit +",des.pos,":",des.edit, " - ", cl,
-                   " - ", day, " - ", repl)) 
-  
-  if(!is.null(nrow(cooccur.mm))){
-    ggList$Mismatch <- ggList$Mismatch + annotate(geom = "text", x = cooccur.mm$position, y = -.04, 
-                                                  color = cooccur.mm$color, label = "*") 
-  }
-}
-
-if(!is.null(ggList$Insertion)){
-  # Insertion plot gets y-axis label
-  ggList$Insertion <- ggList$Insertion + 
-    ylab("Edit Frequency") + 
-    annotate(geom = "text", x = 25, y = .55, 
-             label = paste0("Desired edit + insertion: ", round(insedit*100,2), "%"), 
-             size = 3, hjust = 1) + 
-    annotate(geom = "text", x = 25, y = .48, 
-             label = paste0("Insertion only: ", round(insonly*100,2), "%"), 
-             size = 3, hjust = 1) +
-    labs(fill = "Insertion") +
-    scale_fill_manual(values = insertion.colors)
-  
-  if(!is.null(nrow(cooccur.ins))){
-    ggList$Insertion <- ggList$Insertion + annotate(geom = "text", x = cooccur.ins$position, y = -.04, 
-                                                    color = cooccur.ins$color, label = "*")
-  }
-}
-
-if(!is.null(ggList$Deletion)){
-  # Deletion plot gets x-axis label
-  ggList$Deletion <- ggList$Deletion + 
-    xlab("Position relative to nicking site") + 
-    annotate(geom = "text", x = 25, y = .55, 
-             label = paste0("Desired edit + deletion: ", round(deledit*100,2), "%"), 
-             size = 3, hjust = 1) + 
-    annotate(geom = "text", x = 25, y = .48, 
-             label = paste0("Deletion only: ", round(delonly*100,2), "%"), 
-             size = 3, hjust = 1) +
-    labs(fill = "Deletion") +
-    scale_fill_manual(values = deletion.colors)
-  
-  if(!is.null(nrow(cooccur.del))){
-    ggList$Deletion <- ggList$Deletion + annotate(geom = "text", x = cooccur.del$position, y = -.04, 
-                                                  color = cooccur.del$color, label = "*") 
-  }
-}
-
-### For plots with only two edit categories
-# Mismatch + deletion
-if(is.null(ggList$Insertion) & !is.null(ggList$Deletion) & !is.null(ggList$Mismatch)){
-  ggList$Deletion <- ggList$Deletion + ylab("Edit Frequency")
-}
-# Mismatch + insertion
-if(is.null(ggList$Deletion) & !is.null(ggList$Insertion) & !is.null(ggList$Mismatch)){
-  ggList$Insertion <- ggList$Insertion + xlab("Position relative to nicking site")
-}
-# Insertion + deletion
-if(!is.null(ggList$Insertion) & !is.null(ggList$Deletion) & is.null(ggList$Mismatch)){
-  ggList$Insertion <- ggList$Insertion + ggtitle(paste0("Editing Outcomes for ", gene.name, 
-                                                        " - Edit +",des.pos,":",des.edit, " - ", cl,
-                                                        " - ", day, " - ", repl))
-}
-
-### For plots with only a single edit category
-# Mismatch only
-if(is.null(ggList$Insertion) & is.null(ggList$Deletion) & !is.null(ggList$Mismatch)){
-  ggList$Mismatch <- ggList$Mismatch + 
-                      xlab("Position relative to nicking site") +
-                      ylab("Edit Frequency")
-}
-# Insertion only
-if(!is.null(ggList$Insertion) & is.null(ggList$Deletion) & is.null(ggList$Mismatch)){
-  ggList$Insertion <- ggList$Insertion + 
-                        xlab("Position relative to nicking site") +
-                        ggtitle(paste0("Editing Outcomes for ", gene.name, 
-                                " - Edit +",des.pos,":",des.edit, " - ", cl,
-                                " - ", day, " - ", repl)) 
-}
-# Deletion only
-if(is.null(ggList$Insertion) & !is.null(ggList$Deletion) & is.null(ggList$Mismatch)){
-  ggList$Deletion <- ggList$Deletion + 
-                      ylab("Edit Frequency") + 
-                      ggtitle(paste0("Editing Outcomes for ", gene.name, 
-                      " - Edit +",des.pos,":",des.edit, " - ", cl,
-                      " - ", day, " - ", repl)) 
-}
-
-# Combine plots
-edit.plt <- cowplot::plot_grid(plotlist = ggList, ncol = 1, align = 'v')
-
-print("Saving outcome characteristics...")
-
-# Save characterizations
-ggsave(paste0(out.path, "/outcome_characterizations_",pegID,".pdf"),
-       edit.plt,
-       device = "pdf",
-       height = 7,
-       width = 10)
-
-print("Step 3 - Characterizing outcomes - is complete...")
-print(paste0(pegID, " successfully analyzed. Script complete."))
