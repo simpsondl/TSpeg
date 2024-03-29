@@ -1,0 +1,2 @@
+pegID	CellLine	Day	Replicate	TotalReads	Freq.TotalWildType	Freq.TotalOffTarget	Freq.EditOnly	Freq.Sum
+BPIFA2_484_5GtoC_13_12	PEmaxKO	Day 7	R1	12361	0.918534099182914	0.0261305719601974	0.0553353288568886	1
