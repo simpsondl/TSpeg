@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
-#SBATCH --time=24:00:00
-#SBATCH --mem=50G
+#SBATCH --time=1:00:00
+#SBATCH --mem=16G
 #SBATCH --job-name="align"
-#SBATCH --output=~/logs/%x-%j.out
+#SBATCH --output=%x-%j.out
 
 ##########################################################################
 #### BEFORE RUNNING THIS, edit the SBATCH directives above to point   ####
