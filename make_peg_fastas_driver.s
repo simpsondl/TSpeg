@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=36:00:00
-#SBATCH --mem=50G
+#SBATCH --time=1:00:00
+#SBATCH --mem=16G
 #SBATCH --job-name="makepegfq"
-#SBATCH --output=/Genomics/grid/users/ds65/logs/%x-%j.out
+#SBATCH --output=%x-%j.out
 
 ##########################################################################
 #### BEFORE RUNNING THIS, edit the SBATCH directives above to point   ####
@@ -95,5 +95,5 @@ done
 for i in tmp_*
 do
 	sbatch --export=sampfq=${sampfq},chnk=${i},trimb=${trimb},trime=${trime} \
-	~/scripts/pegRNA/make_peg_fastas_mini.s  #THIS PATH SHOULD BE UPDATED TO A LOCAL COPY
+	../make_peg_fastas_mini.s  #THIS PATH SHOULD BE UPDATED TO A LOCAL COPY
 done
