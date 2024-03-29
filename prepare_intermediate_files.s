@@ -4,7 +4,7 @@
 #SBATCH --time=12:00:00
 #SBATCH --mem=50G
 #SBATCH --job-name="makeintermediates"
-#SBATCH --output=/Genomics/grid/users/ds65/logs/%x-%j.out
+#SBATCH --output=%x-%j.out
 
 ##########################################################################
 #### BEFORE RUNNING THIS, edit the SBATCH directives above to point   ####
