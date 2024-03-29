@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=2:00:00
-#SBATCH --mem=32G
+#SBATCH --time=1:00:00
+#SBATCH --mem=16G
 #SBATCH --job-name="editing_outcomes"
-#SBATCH --output=/Genomics/grid/users/ds65/logs/peg_outcomes/%x-%j.out
+#SBATCH --output=%x-%j.out
 
 module load R/4.2.0
 
@@ -13,7 +13,7 @@ timestart=`date`
 
 echo "Starting at $timestart"
 
-Rscript ~/scripts/pegRNA/editing_pipeline.R \
+Rscript ../editing_pipeline.R \
 --file=$fq \
 --pegID=$id \
 --cellline=$cl \
